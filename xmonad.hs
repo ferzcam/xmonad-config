@@ -1,4 +1,4 @@
--- File to be saved at ~/.config/xmonad/
+--
 -- xmonad example config file.
 --
 -- A template showing all available configuration hooks,
@@ -14,10 +14,11 @@ import Data.Monoid
 import System.Exit
 import XMonad.Util.SpawnOnce
 import Graphics.X11.ExtraTypes.XF86
-
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 
+import XMonad.Actions.WorkspaceNames
+import XMonad.Hooks.DynamicLog
 -- The preferred terminal program, which is used in a binding below and by
 -- certain contrib modules.
 --
@@ -162,6 +163,10 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     , ((0, xF86XK_AudioPlay), spawn "playerctl play-pause")
     ]
+
+    ++
+    -- Workspace names
+    [((modm .|. shiftMask, xK_r), renameWorkspace def)]
 ------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
 --
@@ -244,7 +249,7 @@ myEventHook = mempty
 -- Perform an arbitrary action on each internal state change or X event.
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
-myLogHook = return ()
+myLogHook = workspaceNamesPP xmobarPP >>= dynamicLogString >>= xmonadPropLog
 
 ------------------------------------------------------------------------
 -- Startup hook
@@ -265,7 +270,7 @@ myStartupHook = do
 --
 main = do
   xmproc <- spawnPipe "xmobar -x 0 /home/zhapacfp/.config/xmobar/xmobarrc"
-  xmonad $ docks defaults
+  xmonad $ docks defaults 
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
