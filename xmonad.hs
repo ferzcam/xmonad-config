@@ -10,8 +10,13 @@
 import XMonad
 import XMonad.Util.Run
 import XMonad.Hooks.ManageDocks
+import XMonad.Hooks.DynamicLog
+import XMonad.Actions.WorkspaceNames
 import Data.Monoid
 import System.Exit
+import System.IO
+import Data.Maybe
+import Data.List
 import XMonad.Util.SpawnOnce
 import Graphics.X11.ExtraTypes.XF86
 
@@ -244,7 +249,15 @@ myEventHook = mempty
 -- Perform an arbitrary action on each internal state change or X event.
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
-myLogHook = return ()
+
+myLogHook xmproc = dynamicLogWithPP $ def --xmobarPP
+                        { ppOutput = hPutStrLn xmproc
+                        , ppCurrent = xmobarColor "yellow" "" . wrap "[" "]"
+                        , ppHiddenNoWindows = xmobarColor "grey" ""
+                        , ppTitle   = xmobarColor "green"  "" . shorten 40
+                        , ppVisible = wrap "(" ")"
+                        , ppUrgent  = xmobarColor "red" "yellow"
+                        }
 
 ------------------------------------------------------------------------
 -- Startup hook
@@ -258,23 +271,21 @@ myStartupHook = do
   spawnOnce "nitrogen --restore &"
   spawnOnce "compton &"
 
+
+
+
+                
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
-main = do
-  xmproc <- spawnPipe "xmobar -x 0 /home/zhapacfp/.config/xmobar/xmobarrc"
-  xmonad $ docks defaults
+-- show window numbers
 
--- A structure containing your configuration settings, overriding
--- fields in the default config. Any you don't override, will
--- use the defaults defined in xmonad/XMonad/Config.hs
---
--- No need to modify this.
---
-defaults = def {
-      -- simple stuff
+main = do
+  xmproc <- spawnPipe "xmobar  ~/.config/xmobar/xmobarrc"
+  xmonad $ docks def {
+    -- simple stuff
         terminal           = myTerminal,
         focusFollowsMouse  = myFocusFollowsMouse,
         clickJustFocuses   = myClickJustFocuses,
@@ -292,9 +303,41 @@ defaults = def {
         layoutHook         = myLayout,
         manageHook         = myManageHook,
         handleEventHook    = myEventHook,
-        logHook            = myLogHook,
-        startupHook        = myStartupHook
+        startupHook        = myStartupHook,
+        logHook            = myLogHook xmproc
     }
+  
+    
+
+-- A structure containing your configuration settings, overriding
+-- fields in the default config. Any you don't override, will
+-- use the defaults defined in xmonad/XMonad/Config.hs
+--
+-- No need to modify this.
+--
+
+--defaults = def {
+      -- simple stuff
+    --     terminal           = myTerminal,
+    --     focusFollowsMouse  = myFocusFollowsMouse,
+    --     clickJustFocuses   = myClickJustFocuses,
+    --     borderWidth        = myBorderWidth,
+    --     modMask            = myModMask,
+    --     workspaces         = myWorkspaces,
+    --     normalBorderColor  = myNormalBorderColor,
+    --     focusedBorderColor = myFocusedBorderColor,
+
+    --   -- key bindings
+    --     keys               = myKeys,
+    --     mouseBindings      = myMouseBindings,
+
+    --   -- hooks, layouts
+    --     layoutHook         = myLayout,
+    --     manageHook         = myManageHook,
+    --     handleEventHook    = myEventHook,
+    --     logHook            = myLogHook ,
+    --     startupHook        = myStartupHook
+    -- }
 
 -- | Finally, a copy of the default bindings in simple textual tabular format.
 help :: String

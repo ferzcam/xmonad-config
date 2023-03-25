@@ -15,16 +15,7 @@ Config { font = "xft:Ubuntu Mono:pixelsize=20:antialias=true:hinting=true"
        , iconRoot = "."
        , allDesktops = True
        , overrideRedirect = True
-       , commands = [ Run Weather "OEJN" ["-t","<tempC>C <station>",
-                                          "-L","18","-H","25",
-                                          "--normal","green",
-                                          "--high","red",
-                                          "--low","lightblue"] 36000
-                    , Run Network "eth0" ["-L","0","-H","32",
-                                          "--normal","green","--high","red"] 10
-                    , Run Network "eth1" ["-L","0","-H","32",
-                                          "--normal","green","--high","red"] 10
-	  	    , Run Wireless "wlp0s20f3" ["-t", "<essid>"] 10
+       , commands = [ Run Wireless "wlp0s20f3" ["-t", "<essid>"] 10
 
                     , Run Cpu ["-L","3","-H","50",
                                "--normal","green","--high","red"] 10
@@ -37,9 +28,11 @@ Config { font = "xft:Ubuntu Mono:pixelsize=20:antialias=true:hinting=true"
                			   , "-l", "red", "-h", "green"
                			   , "--", "-O", "Charging", "-o", "Battery: <left>%"
                			   ] 10
+		    , Run StdinReader
 		]
        , sepChar = "%"
        , alignSep = "}{"
-       , template = "%cpu% | %memory% * %swap% | %eth0% - %eth1% - %wlp0s20f3wi% | %battery% }\
-                    \{ <fc=#ee9a00>%date%</fc>| %OEJN%"
+       , template = " %StdinReader% | %cpu% | %memory% * %swap% | %wlp0s20f3wi% | %battery% }\
+                    \{ <fc=#ee9a00>%date%</fc> "
+       
        }
