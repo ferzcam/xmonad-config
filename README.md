@@ -17,6 +17,10 @@ Paste the `xmobarrc` file into	`~/.config/xmobar/
 sudo apt install xmobar
 ```
 
+# Use Dunst for notifications
+Install dunst preferably from Github: https://github.com/dunst-project/dunst
+
+Plase the `dunstrc` file into `~/.config/dunst/`
 
 # After installing
 

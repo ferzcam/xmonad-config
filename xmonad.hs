@@ -298,7 +298,7 @@ myLogHook xmproc = dynamicLogWithPP $ def --xmobarPP
 myStartupHook = do
   spawnOnce "nitrogen --restore &"
   spawnOnce "compton &"
-  
+  spawnOnce "dunst &"
   -- Initialize workspaces adaptively based on screen count
   screenCount <- countScreens
   if screenCount <= 1

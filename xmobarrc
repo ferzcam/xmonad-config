@@ -16,12 +16,12 @@ Config { font = "xft:Ubuntu Mono:pixelsize=20:antialias=true:hinting=true"
        , allDesktops = True
        , overrideRedirect = True
        , commands = [ Run Wireless "wlp0s20f3" ["-t", "<essid>"] 10
-
+       	 	    , Run Com "dunst-status" [] "notifications" 10
                     , Run Cpu ["-L","3","-H","50",
                                "--normal","green","--high","red"] 10
                     , Run Memory ["-t","Mem: <usedratio>%"] 10
                     , Run Swap [] 10
-                    ,Run Date "%a %b %_d %Y %H:%M:%S" "date" 10
+                    , Run Date "%a %b %_d %Y %H:%M:%S" "date" 10
 		    , Run BatteryP ["/sys/class/power_supply/BAT0"]
 		    		   ["-t", "<acstatus>"
 		                   , "-L", "10", "-H", "80"
@@ -33,6 +33,6 @@ Config { font = "xft:Ubuntu Mono:pixelsize=20:antialias=true:hinting=true"
        , sepChar = "%"
        , alignSep = "}{"
        , template = " %StdinReader% | %cpu% | %memory% * %swap% | %wlp0s20f3wi% | %battery% }\
-                    \{ <fc=#ee9a00>%date%</fc> "
+                    \{ %notifications% | <fc=#ee9a00>%date%</fc> "
        
        }
