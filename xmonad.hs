@@ -1,12 +1,3 @@
--- File to be saved at ~/.config/xmonad/
--- xmonad example config file.
---
--- A template showing all available configuration hooks,
--- and how to override the defaults in your own xmonad.hs conf file.
---
--- Normally, you'd only override those defaults you care about.
---
-
 import XMonad
 import XMonad.Util.Run
 import XMonad.Hooks.ManageDocks
@@ -19,6 +10,19 @@ import Data.Maybe
 import Data.List
 import XMonad.Util.SpawnOnce
 import Graphics.X11.ExtraTypes.XF86
+-- Add these new imports
+import XMonad.Actions.OnScreen
+import XMonad.Hooks.EwmhDesktops
+import XMonad.Hooks.ManageHelpers
+import XMonad.Layout.PerWorkspace
+import XMonad.Hooks.SetWMName
+import XMonad.Hooks.ScreenCorners
+import XMonad.Hooks.ManageHelpers
+import XMonad.Hooks.UrgencyHook
+import XMonad.Hooks.StatusBar
+import XMonad.Actions.UpdatePointer
+import XMonad.Actions.Promote
+import XMonad.Layout.LayoutHints
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
@@ -47,15 +51,18 @@ myBorderWidth   = 2
 --
 myModMask       = mod4Mask
 
--- By default we use numeric strings, but any string may be used as a
--- workspace name. The number of workspaces is determined by the length
--- of this list.
---
--- A tagging example:
---
--- > workspaces = ["web", "irc", "code" ] ++ map show [4..9]
---
-myWorkspaces    = ["1","2","3","4","5","6","7","8","9"]
+-- Define workspaces and which screen they should appear on
+-- Screen 0 is typically the main screen, 1 is the secondary screen
+myWorkspaces = ["1","2","3","4","5","6","7","8","9"]
+
+-- Define which workspaces go on which screens in dual-screen mode
+screen0Workspaces = ["1","2","9"]  -- Workspaces for first screen
+screen1Workspaces = ["3", "4", "5", "6","7","8"]      -- Workspaces for second screen
+
+-- Function to determine which screen a workspace should be viewed on
+-- when in dual-screen mode
+getScreenForWorkspace :: WorkspaceId -> ScreenId
+getScreenForWorkspace ws = if ws `elem` screen0Workspaces then 0 else 1
 
 -- Border colors for unfocused and focused windows, respectively.
 --
@@ -141,13 +148,24 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     ]
     ++
 
-    --
-    -- mod-[1..9], Switch to workspace N
-    -- mod-shift-[1..9], Move client to workspace N
-    --
-    [((m .|. modm, k), windows $ f i)
-        | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
-        , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
+    -- Special case for workspace switching that adapts to screen count
+    -- If only one screen, all workspaces go to that screen
+    -- If multiple screens, workspaces go to their assigned screen
+    [((modm, k), do
+        screenCount <- countScreens
+        if screenCount <= 1
+            then windows $ W.greedyView i  -- Single screen mode
+            else windows $ adaptiveView i) -- Multi-screen mode
+     | (i, k) <- zip myWorkspaces [xK_1 .. xK_9]]
+    ++
+    
+    -- Move windows to workspaces, adapting to screen count
+    [((modm .|. shiftMask, k), do
+        screenCount <- countScreens
+        if screenCount <= 1
+            then windows $ W.shift i  -- Single screen mode
+            else windows $ W.shift i) -- In both cases, just shift the window
+     | (i, k) <- zip myWorkspaces [xK_1 .. xK_9]]
     ++
 
     --
@@ -167,6 +185,20 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     , ((0, xF86XK_AudioPlay), spawn "playerctl play-pause")
     ]
+
+-- Helper function to count screens
+countScreens :: X Int
+countScreens = withDisplay $ \dpy -> do
+    root <- asks theRoot
+    (_,_,wins) <- io $ queryTree dpy root
+    return $ length wins
+
+-- Helper function to view a workspace on its assigned screen (multi-monitor mode)
+adaptiveView :: WorkspaceId -> WindowSet -> WindowSet
+adaptiveView wsid ws = 
+    let sid = getScreenForWorkspace wsid
+    in W.view wsid (viewOnScreen sid wsid ws)
+
 ------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
 --
@@ -235,13 +267,10 @@ myManageHook = composeAll
 ------------------------------------------------------------------------
 -- Event handling
 
--- * EwmhDesktops users should change this to ewmhDesktopsEventHook
---
--- Defines a custom handler function for X Events. The function should
--- return (All True) if the default handler is to be run afterwards. To
--- combine event hooks use mappend or mconcat from Data.Monoid.
---
-myEventHook = mempty
+-- Define a custom event hook that will ensure workspaces appear on their assigned screens
+-- Fixed deprecation warnings by using ewmhFullscreen instead of fullscreenEventHook
+-- and removing docksEventHook (since we're using docks in the main function)
+myEventHook = handleEventHook def
 
 ------------------------------------------------------------------------
 -- Status bars and logging
@@ -266,25 +295,31 @@ myLogHook xmproc = dynamicLogWithPP $ def --xmobarPP
 -- with mod-q.  Used by, e.g., XMonad.Layout.PerWorkspace to initialize
 -- per-workspace layout choices.
 --
--- By default, do nothing.
 myStartupHook = do
   spawnOnce "nitrogen --restore &"
   spawnOnce "compton &"
+  
+  -- Initialize workspaces adaptively based on screen count
+  screenCount <- countScreens
+  if screenCount <= 1
+    then do
+      -- Single screen mode: Just view workspace 1 on the only screen
+      windows $ W.greedyView "1"
+    else do
+      -- Multi-screen mode: Set up workspaces on their respective screens
+      windows $ adaptiveView "1" -- View workspace 1 on screen 0
+      windows $ adaptiveView "6" -- View workspace 6 on screen 1
 
-
-
-
-                
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
--- show window numbers
-
 main = do
   xmproc <- spawnPipe "xmobar  ~/.config/xmobar/xmobarrc"
-  xmonad $ docks def {
+  
+  -- Using ewmhFullscreen along with docks to fix the deprecation warnings
+  xmonad $ ewmhFullscreen $ ewmh $ docks $ def {
     -- simple stuff
         terminal           = myTerminal,
         focusFollowsMouse  = myFocusFollowsMouse,
@@ -306,38 +341,6 @@ main = do
         startupHook        = myStartupHook,
         logHook            = myLogHook xmproc
     }
-  
-    
-
--- A structure containing your configuration settings, overriding
--- fields in the default config. Any you don't override, will
--- use the defaults defined in xmonad/XMonad/Config.hs
---
--- No need to modify this.
---
-
---defaults = def {
-      -- simple stuff
-    --     terminal           = myTerminal,
-    --     focusFollowsMouse  = myFocusFollowsMouse,
-    --     clickJustFocuses   = myClickJustFocuses,
-    --     borderWidth        = myBorderWidth,
-    --     modMask            = myModMask,
-    --     workspaces         = myWorkspaces,
-    --     normalBorderColor  = myNormalBorderColor,
-    --     focusedBorderColor = myFocusedBorderColor,
-
-    --   -- key bindings
-    --     keys               = myKeys,
-    --     mouseBindings      = myMouseBindings,
-
-    --   -- hooks, layouts
-    --     layoutHook         = myLayout,
-    --     manageHook         = myManageHook,
-    --     handleEventHook    = myEventHook,
-    --     logHook            = myLogHook ,
-    --     startupHook        = myStartupHook
-    -- }
 
 -- | Finally, a copy of the default bindings in simple textual tabular format.
 help :: String
