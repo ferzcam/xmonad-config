@@ -1,0 +1,17 @@
+Config { font = "xft:Ubuntu Mono:pixelsize=20:antialias=true:hinting=true"
+       , borderColor = "black"
+       , border = BottomB
+       , bgColor = "black"
+       , fgColor = "grey"
+       , alpha = 255
+       , position = Bottom
+       , lowerOnStart = True
+       , persistent = False
+       , hideOnStart = False
+       , allDesktops = True
+       , overrideRedirect = True
+       , commands = [ Run UnsafeStdinReader ]
+       , sepChar = "%"
+       , alignSep = "}{"
+       , template = " %UnsafeStdinReader% "
+       }

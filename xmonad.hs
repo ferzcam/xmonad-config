@@ -80,6 +80,12 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- launch dmenu
     , ((modm,               xK_p     ), spawn "dmenu_run")
 
+    -- launch todos
+    , ((modm,               xK_o     ), spawn "todos.sh")
+
+    -- toggle lichess puzzle popup
+    , ((modm .|. shiftMask, xK_l     ), spawn "lichess-puzzle.sh")
+
     -- launch gmrun
     , ((modm .|. shiftMask, xK_p     ), spawn "gmrun")
 
@@ -184,6 +190,9 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((0, xF86XK_AudioMute), spawn "pactl set-sink-mute @DEFAULT_SINK@ toggle")    
 
     , ((0, xF86XK_AudioPlay), spawn "playerctl play-pause")
+
+    , ((0, xF86XK_MonBrightnessUp),   spawn "brightnessctl set +5%")
+    , ((0, xF86XK_MonBrightnessDown), spawn "brightnessctl set 5%-")
     ]
 
 -- Helper function to count screens
@@ -261,6 +270,7 @@ myLayout = avoidStruts (tiled ||| Mirror tiled ||| Full)
 myManageHook = composeAll
     [ className =? "MPlayer"        --> doFloat
     , className =? "Gimp"           --> doFloat
+    , className =? "LichessPuzzle"  --> doRectFloat (W.RationalRect 0.225 0.025 0.55 0.97)
     , resource  =? "desktop_window" --> doIgnore
     , resource  =? "kdesktop"       --> doIgnore ]
 
@@ -279,14 +289,29 @@ myEventHook = handleEventHook def
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
 
-myLogHook xmproc = dynamicLogWithPP $ def --xmobarPP
-                        { ppOutput = hPutStrLn xmproc
-                        , ppCurrent = xmobarColor "yellow" "" . wrap "[" "]"
-                        , ppHiddenNoWindows = xmobarColor "grey" ""
-                        , ppTitle   = xmobarColor "green"  "" . shorten 40
-                        , ppVisible = wrap "(" ")"
-                        , ppUrgent  = xmobarColor "red" "yellow"
-                        }
+myLogHook xmproc titleProc = do
+    dynamicLogWithPP $ def
+        { ppOutput          = hPutStrLn xmproc
+        , ppCurrent         = xmobarColor "yellow" "" . wrap "[" "]"
+        , ppHiddenNoWindows = xmobarColor "grey" ""
+        , ppTitle           = const ""
+        , ppVisible         = wrap "(" ")"
+        , ppUrgent          = xmobarColor "red" "yellow"
+        }
+    dynamicLogWithPP $ def
+        { ppOutput          = hPutStrLn titleProc
+        , ppCurrent         = xmobarColor "yellow" "" . wrap "[" "]"
+        , ppHidden          = const ""
+        , ppHiddenNoWindows = const ""
+        , ppLayout          = const ""
+        , ppVisible         = const ""
+        , ppUrgent          = const ""
+        , ppWsSep           = ""
+        , ppSep             = "  "
+        , ppTitle           = id
+        , ppTitleSanitize   = id
+        , ppOrder           = \(ws:_l:t:_) -> [ws, t]
+        }
 
 ------------------------------------------------------------------------
 -- Startup hook
@@ -316,7 +341,8 @@ myStartupHook = do
 -- Run xmonad with the settings you specify. No need to modify this.
 --
 main = do
-  xmproc <- spawnPipe "xmobar  ~/.config/xmobar/xmobarrc"
+  xmproc    <- spawnPipe "xmobar ~/.config/xmobar/xmobarrc"
+  titleProc <- spawnPipe "xmobar ~/.config/xmobar/xmobarrc-title"
   
   -- Using ewmhFullscreen along with docks to fix the deprecation warnings
   xmonad $ ewmhFullscreen $ ewmh $ docks $ def {
@@ -339,7 +365,7 @@ main = do
         manageHook         = myManageHook,
         handleEventHook    = myEventHook,
         startupHook        = myStartupHook,
-        logHook            = myLogHook xmproc
+        logHook            = myLogHook xmproc titleProc
     }
 
 -- | Finally, a copy of the default bindings in simple textual tabular format.
